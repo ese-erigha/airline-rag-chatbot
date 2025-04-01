@@ -1,0 +1,52 @@
+version: "3.8"
+services:
+  api:
+    container_name: api
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "5005:5005"
+    env_file:
+      - ./api/.env
+    depends_on:
+      - ollama
+      - chroma
+    volumes:
+      - ./api:/home
+    networks:
+      - net
+
+  ollama:
+    container_name: ollama
+    build:
+      context: ./ollama
+      dockerfile: Dockerfile
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_vol:/ollama
+    networks:
+      - net
+    entrypoint: [ "/usr/bin/bash", "pull-llama3.sh" ]
+
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    volumes:
+      - chroma_data:/chroma/.chroma/index
+    ports:
+      - "8000:8000"
+    networks:
+      - net
+
+volumes:
+  chroma_data:
+    driver: local
+  backups:
+    driver: local
+  ollama_data:
+    driver: local
+
+networks:
+  net:
+    driver: bridge
