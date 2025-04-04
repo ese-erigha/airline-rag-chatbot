@@ -11,4 +11,13 @@ COPY . ./
 
 RUN pip install -r requirements.txt
 
-CMD exec uvicorn app:app --host '0.0.0.0' --port 5005
+#ENV DOCKERIZE_VERSION v0.9.3
+#
+#RUN apt-get update \
+#    && apt-get install -y wget \
+#    && wget -O - https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz | tar xzf - -C /usr/local/bin \
+#    && apt-get autoremove -yqq --purge wget && rm -rf /var/lib/apt/lists/*
+
+
+#CMD dockerize -wait=http://ollama:11434 -timeout 60m exec uvicorn app:app --host '0.0.0.0' --port 5005
+# CMD exec uvicorn app:app --host '0.0.0.0' --port 5005 --reload

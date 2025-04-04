@@ -1,7 +1,6 @@
 from langchain_core.documents import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_ollama.embeddings import OllamaEmbeddings
-from ..config import settings
+from common.config import config
 from .chromadb_service import ChromaDatabaseService
 from .embeddings import ollamaEmbeddings
 
@@ -16,13 +15,13 @@ class IndexerService:
         return text_splitter.split_documents(docs)
 
     @staticmethod
-    def index_documents(self, documents: list[Document]):
+    def index_documents(documents: list[Document]):
         document_splits = IndexerService.split_documents(documents)
 
         ids = [str(idx) for idx, _ in enumerate(document_splits)]
 
         # Create ChromaDB service
-        chromadb_service = ChromaDatabaseService(collection_name=settings.chromadb_collection,
+        chromadb_service = ChromaDatabaseService(config=config, collection_name=config.chromadb_collection,
                                                  embedding_function=ollamaEmbeddings)
 
         chromadb_service.add_documents_to_collection(documents=document_splits, ids=ids)

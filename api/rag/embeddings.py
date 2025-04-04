@@ -1,8 +1,8 @@
 from langchain_ollama.embeddings import OllamaEmbeddings
 
-from ..config import settings
+from common.config import config
 
 ollamaEmbeddings = OllamaEmbeddings(
-    model=settings.ollama_model,
-    base_url=settings.ollama_base_url  # Adjust the base URL as per your Ollama server configuration
+    model=config.ollama_embedding_model,
+    base_url=config.ollama_base_url  # Adjust the base URL as per your Ollama server configuration
 )

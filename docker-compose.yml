@@ -1,19 +1,18 @@
-version: "3.8"
 services:
   api:
     container_name: api
     build:
       context: ./api
       dockerfile: Dockerfile
+    command: sh -c "uvicorn app:app --reload --port=5005 --host=0.0.0.0"
     ports:
       - "5005:5005"
     env_file:
       - ./api/.env
-    depends_on:
-      - ollama
-      - chroma
     volumes:
-      - ./api:/home
+      - ./api:/app
+    depends_on:
+      - chromadb
     networks:
       - net
 
@@ -25,27 +24,92 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - ollama_vol:/ollama
+      - ollama_data:/ollama
+    healthcheck:
+      test: [ "CMD", "ollama", "list" ]  # Check if Ollama is responding
+      interval: 10s                    # Run the health check every 10 seconds
+      timeout: 30s                     # Timeout for the health check is 30 seconds
+      retries: 5                       # Retry 5 times before marking it as unhealthy
+      start_period: 10s
     networks:
       - net
     entrypoint: [ "/usr/bin/bash", "pull-llama3.sh" ]
 
-  chroma:
-    image: ghcr.io/chroma-core/chroma:latest
+  chromadb:
+    container_name: chromadb
+    image: chromadb/chroma:0.6.3
     volumes:
-      - chroma_data:/chroma/.chroma/index
+      - chromadb_data:/chroma/chroma
     ports:
       - "8000:8000"
+    depends_on:
+      - ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v2/heartbeat"]
+      interval: 30s
+      timeout: 30s
+      retries: 2
+      start_period: 5s
     networks:
       - net
 
+    # https://hub.docker.com/_/postgres
+  postgres:
+    container_name: postgres
+    image: postgres:16-alpine
+    restart: always
+    ports:
+      - 5433:5432
+    volumes:
+      - ~/apps/postgres:/var/lib/postgresql/data
+    networks:
+      - net
+    depends_on:
+      - chromadb
+    environment:
+      POSTGRES_USER: vectoradmin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: vdbms
+
+  vector-admin:
+    container_name: vector-admin
+    platform: linux/x86_64
+    image: mintplexlabs/vectoradmin  # https://github.com/Mintplex-Labs/vector-admin/blob/master/docker/DOCKER.md
+    restart: unless-stopped
+    networks:
+      - net
+    ports:
+      - "3001:3001"
+      - "3355:3355"
+      - "8288:8288"
+    environment: # https://github.com/Mintplex-Labs/vector-admin/blob/master/docker/.env.example
+      SERVER_PORT: 3001
+      DATABASE_CONNECTION_STRING: 'postgresql://vectoradmin:password@postgres:5432/vdbms'
+      # DATABASE_CONNECTION_STRING="postgresql://vectoradmin:password@host:docker:internal:5433/vdbms":
+      JWT_SECRET: 'JWT_SECRET'
+      INNGEST_EVENT_KEY: 'background_workers'
+      INNGEST_SIGNING_KEY: 'INNGEST_SIGNING_KEY'
+      INNGEST_LANDING_PAGE: 'true'
+    volumes:
+      #   - "./.env:/app/backend/.env"
+      - vector-admin-data:/app/backend/storage
+      - vector-admin-hotdir:/app/document-processor/hotdir
+    depends_on:
+      - postgres
+
 volumes:
-  chroma_data:
-    driver: local
-  backups:
+  chromadb_data:
+    name: chromadb_data
     driver: local
   ollama_data:
+    name: ollama_data
     driver: local
+  vector-admin-postgres:
+    name: vector-admin-postgres
+  vector-admin-data:
+    name: vector-admin-data
+  vector-admin-hotdir:
+    name: vector-admin-hotdir
 
 networks:
   net:

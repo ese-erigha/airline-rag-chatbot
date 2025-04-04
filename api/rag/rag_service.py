@@ -3,19 +3,19 @@ from langchain_ollama import ChatOllama
 from .chromadb_service import ChromaDatabaseService
 
 from .embeddings import ollamaEmbeddings
-from ..config import settings
+from common.config import config
 
 
 class RAGService:
 
     @staticmethod
-    def query(prompt: str, query: str):
-        chromadb_service = ChromaDatabaseService(collection_name=settings.chromadb_collection,
+    def query(query: str):
+        chromadb_service = ChromaDatabaseService(config=config, collection_name=config.chromadb_collection,
                                                  embedding_function=ollamaEmbeddings)
 
         vector_store = chromadb_service.get_vector_store()
         retriever = vector_store.as_retriever(search_type="similarity")
-        llm = ChatOllama(temperature=0, model=settings.ollama_model, base_url=settings.ollama_base_url)
+        llm = ChatOllama(temperature=0, model=config.ollama_llm_model, base_url=config.ollama_base_url)
         qa_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever,
                                                return_source_documents=True)
 
@@ -25,4 +25,4 @@ class RAGService:
 
         # https://medium.com/@jyotinigam2370/customer-support-chatbot-using-rag-2934acfa9ea2
         response = qa_chain({"query": query})
-        return response.get('result', "No response generated")
+        return response.get('result', "No relevant information found")
