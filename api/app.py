@@ -40,5 +40,4 @@ def rag_query():
                                        embedding_function=ollamaEmbeddings)
 
     result = db_service.get_documents(collection_name=config.chromadb_collection)
-    print(result)
     return {"documents": result["documents"]}
